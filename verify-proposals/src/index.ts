@@ -1,38 +1,34 @@
 import { ethers, BigNumber } from "ethers";
 import PromisePool from '@supercharge/promise-pool';
-import fs from 'fs/promises';
+import { promises as fsPromises} from 'fs';
 import { createObjectCsvWriter } from 'csv-writer';
 import { ObjectMap } from "csv-writer/src/lib/lang/object";
 import { config } from 'dotenv';
+import bridgeABI from "./bridge-abi.json";
 
 config();
 
 const ETH_PROVIDER = process.env.ETH_PROVIDER;
-const AVA_PROVIDER = process.env.AVA_PROVIDER;
+const METER_PROVIDER = process.env.METER_PROVIDER;
 
 const ethProvider = new ethers.providers.JsonRpcProvider(ETH_PROVIDER);
-const avaProvider = new ethers.providers.JsonRpcProvider(AVA_PROVIDER);
+const meterProvider = new ethers.providers.JsonRpcProvider(METER_PROVIDER);
 
 const ethChainId = 1;
-const avaChainId = 2;
+const meterChainId = 2;
 
-const ethBridgeAddress = "0x96B845aBE346b49135B865E5CeDD735FC448C3aD";
-const avaBridgeAddress = "0x6460777cDa22AD67bBb97536FFC446D65761197E";
+const ethBridgeAddress = "0xd7fb746e905f60e0f84F5eE545104A05066eCD86";
+const meterBridgeAddress = "0xcC5A4195323CB835f22A9B7c6C5Cf6691D4419ec";
 
-const ethHandler = "0xdAC7Bb7Ce4fF441A235F08408e632FA1D799A147"
-const avaHandler = "0x6147F5a1a4eEa5C529e2F375Bd86f8F58F8Bc990"
-
-const avaStartBlock = 296840;
-const ethStartBlock = 11912833;
-
-const bridgeABI = [{"inputs":[{"internalType":"uint8","name":"chainID","type":"uint8"},{"internalType":"address[]","name":"initialRelayers","type":"address[]"},{"internalType":"uint256","name":"initialRelayerThreshold","type":"uint256"},{"internalType":"uint256","name":"fee","type":"uint256"},{"internalType":"uint256","name":"expiry","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint8","name":"destinationChainID","type":"uint8"},{"indexed":true,"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"indexed":true,"internalType":"uint64","name":"depositNonce","type":"uint64"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Paused","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint8","name":"originChainID","type":"uint8"},{"indexed":true,"internalType":"uint64","name":"depositNonce","type":"uint64"},{"indexed":true,"internalType":"enum Bridge.ProposalStatus","name":"status","type":"uint8"},{"indexed":false,"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"indexed":false,"internalType":"bytes32","name":"dataHash","type":"bytes32"}],"name":"ProposalEvent","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint8","name":"originChainID","type":"uint8"},{"indexed":true,"internalType":"uint64","name":"depositNonce","type":"uint64"},{"indexed":true,"internalType":"enum Bridge.ProposalStatus","name":"status","type":"uint8"},{"indexed":false,"internalType":"bytes32","name":"resourceID","type":"bytes32"}],"name":"ProposalVote","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"relayer","type":"address"}],"name":"RelayerAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"relayer","type":"address"}],"name":"RelayerRemoved","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"newThreshold","type":"uint256"}],"name":"RelayerThresholdChanged","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleGranted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"role","type":"bytes32"},{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"sender","type":"address"}],"name":"RoleRevoked","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"account","type":"address"}],"name":"Unpaused","type":"event"},{"inputs":[],"name":"DEFAULT_ADMIN_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"RELAYER_ROLE","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_chainID","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"_depositCounts","outputs":[{"internalType":"uint64","name":"","type":"uint64"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint64","name":"","type":"uint64"},{"internalType":"uint8","name":"","type":"uint8"}],"name":"_depositRecords","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_expiry","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_fee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint72","name":"","type":"uint72"},{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"address","name":"","type":"address"}],"name":"_hasVotedOnProposal","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint72","name":"","type":"uint72"},{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"_proposals","outputs":[{"internalType":"bytes32","name":"_resourceID","type":"bytes32"},{"internalType":"bytes32","name":"_dataHash","type":"bytes32"},{"internalType":"enum Bridge.ProposalStatus","name":"_status","type":"uint8"},{"internalType":"uint256","name":"_proposedBlock","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_relayerThreshold","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"_resourceIDToHandlerAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_totalProposals","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_totalRelayers","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"relayerAddress","type":"address"}],"name":"adminAddRelayer","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"adminChangeFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newThreshold","type":"uint256"}],"name":"adminChangeRelayerThreshold","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"adminPauseTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"relayerAddress","type":"address"}],"name":"adminRemoveRelayer","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"handlerAddress","type":"address"},{"internalType":"address","name":"tokenAddress","type":"address"}],"name":"adminSetBurnable","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"handlerAddress","type":"address"},{"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"internalType":"address","name":"contractAddress","type":"address"},{"internalType":"bytes4","name":"depositFunctionSig","type":"bytes4"},{"internalType":"bytes4","name":"executeFunctionSig","type":"bytes4"}],"name":"adminSetGenericResource","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"handlerAddress","type":"address"},{"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"internalType":"address","name":"tokenAddress","type":"address"}],"name":"adminSetResource","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"adminUnpauseTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"handlerAddress","type":"address"},{"internalType":"address","name":"tokenAddress","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amountOrTokenID","type":"uint256"}],"name":"adminWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"chainID","type":"uint8"},{"internalType":"uint64","name":"depositNonce","type":"uint64"},{"internalType":"bytes32","name":"dataHash","type":"bytes32"}],"name":"cancelProposal","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"destinationChainID","type":"uint8"},{"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"internalType":"bytes","name":"data","type":"bytes"}],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"chainID","type":"uint8"},{"internalType":"uint64","name":"depositNonce","type":"uint64"},{"internalType":"bytes","name":"data","type":"bytes"},{"internalType":"bytes32","name":"resourceID","type":"bytes32"}],"name":"executeProposal","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"originChainID","type":"uint8"},{"internalType":"uint64","name":"depositNonce","type":"uint64"},{"internalType":"bytes32","name":"dataHash","type":"bytes32"}],"name":"getProposal","outputs":[{"components":[{"internalType":"bytes32","name":"_resourceID","type":"bytes32"},{"internalType":"bytes32","name":"_dataHash","type":"bytes32"},{"internalType":"address[]","name":"_yesVotes","type":"address[]"},{"internalType":"address[]","name":"_noVotes","type":"address[]"},{"internalType":"enum Bridge.ProposalStatus","name":"_status","type":"uint8"},{"internalType":"uint256","name":"_proposedBlock","type":"uint256"}],"internalType":"struct Bridge.Proposal","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleAdmin","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"uint256","name":"index","type":"uint256"}],"name":"getRoleMember","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"}],"name":"getRoleMemberCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"grantRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"hasRole","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"relayer","type":"address"}],"name":"isRelayer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"newAdmin","type":"address"}],"name":"renounceAdmin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"renounceRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"role","type":"bytes32"},{"internalType":"address","name":"account","type":"address"}],"name":"revokeRole","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address payable[]","name":"addrs","type":"address[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"name":"transferFunds","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"chainID","type":"uint8"},{"internalType":"uint64","name":"depositNonce","type":"uint64"},{"internalType":"bytes32","name":"resourceID","type":"bytes32"},{"internalType":"bytes32","name":"dataHash","type":"bytes32"}],"name":"voteProposal","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+const ethHandler = "0x5eb75e79CDa25AB88e4779aA00F1D5a95AC1352B"
+const meterHandler = "0xf8A06b9E8B24Ea21E88930F9878C410334EE076f"
 
 const ethBridge = new ethers.Contract(ethBridgeAddress, bridgeABI, ethProvider);
-const avaBridge = new ethers.Contract(avaBridgeAddress, bridgeABI, avaProvider);
+const meterBridge = new ethers.Contract(meterBridgeAddress, bridgeABI, meterProvider);
 
 async function findFailedProposals(originName: string, destinationName: string, 
                                    originBridge: ethers.Contract, destinationBridge: ethers.Contract, 
-                                   originChangeID: number, destinationChainID: number, 
+                                   originChainID: number, destinationChainID: number, 
                                    destinationHandler: string, startOriginBlock: number = 0) {
     const totalDeposits = Number((await originBridge._depositCounts(destinationChainID)).toString());
     console.log("Searching thru " + totalDeposits + " deposits for")
@@ -47,7 +43,7 @@ async function findFailedProposals(originName: string, destinationName: string,
             const records = (await originBridge._depositRecords(noince, destinationChainID));
             const hash = ethers.utils.solidityKeccak256(["address", "bytes"], [destinationHandler, records]);
             console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Grabbing proposal with hash " + hash)
-            const proposal = await destinationBridge.getProposal(originChangeID, noince, hash);
+            const proposal = await destinationBridge.getProposal(originChainID, noince, hash);
             
             if (proposal._resourceID == "0x0000000000000000000000000000000000000000000000000000000000000000") {
                 console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] No proposal found, skipping")
@@ -59,7 +55,7 @@ async function findFailedProposals(originName: string, destinationName: string,
                 return null;
             }
 
-            console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Grabbing Despot event")
+            console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Grabbing Deposit event")
             const event = originBridge.filters.Deposit(null, null, noince);
             const originEvents = await originBridge.queryFilter(event, 0, 'latest')
 
@@ -123,8 +119,8 @@ async function findFailedProposals(originName: string, destinationName: string,
 async function main() {
     try {
         const tempResults = await Promise.all([
-            findFailedProposals('Ethereum', 'Avalanche', ethBridge, avaBridge, ethChainId, avaChainId, avaHandler),
-            findFailedProposals('Avalanche', 'Ethereum', avaBridge, ethBridge, avaChainId, ethChainId, ethHandler)
+            findFailedProposals('Ethereum', 'Meter', ethBridge, meterBridge, ethChainId, meterChainId, meterHandler),
+            findFailedProposals('Meter', 'Ethereum', meterBridge, ethBridge, meterChainId, ethChainId, ethHandler)
         ]);
         console.log("Collecting all data");
 
@@ -152,7 +148,7 @@ async function main() {
         });
 
         console.log("Writing JSON file");
-        await fs.writeFile('results.json', json);
+        await fsPromises.writeFile('results.json', json);
 
         console.log("Writing CSV file");
         await csvWriter.writeRecords(results);
