@@ -3,4 +3,7 @@ dist/
 node_modules/
 *.csv
 results.json
+Bsc_Eth.json
+Eth_Meter.json
+Meter_Bsc.json
 

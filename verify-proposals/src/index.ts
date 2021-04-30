@@ -10,21 +10,27 @@ config();
 
 const ETH_PROVIDER = process.env.ETH_PROVIDER;
 const METER_PROVIDER = process.env.METER_PROVIDER;
+const BSC_PROVIDER = process.env.BSC_PROVIDER;
 
 const ethProvider = new ethers.providers.JsonRpcProvider(ETH_PROVIDER);
 const meterProvider = new ethers.providers.JsonRpcProvider(METER_PROVIDER);
+const bscProvider = new ethers.providers.JsonRpcProvider(BSC_PROVIDER);
 
 const ethChainId = 1;
 const meterChainId = 2;
+const bscChainId = 4;
 
 const ethBridgeAddress = "0xd7fb746e905f60e0f84F5eE545104A05066eCD86";
 const meterBridgeAddress = "0xcC5A4195323CB835f22A9B7c6C5Cf6691D4419ec";
+const bscBridgeAddress = " 0xa939D6a9E91ebD962f36bD0f7cf1c6C3C12c798f";
 
 const ethHandler = "0x5eb75e79CDa25AB88e4779aA00F1D5a95AC1352B"
 const meterHandler = "0xf8A06b9E8B24Ea21E88930F9878C410334EE076f"
+const bscHandler = "0xD352C65Bcea484A5d10cB596CF80aBB846c6898F"
 
 const ethBridge = new ethers.Contract(ethBridgeAddress, bridgeABI, ethProvider);
 const meterBridge = new ethers.Contract(meterBridgeAddress, bridgeABI, meterProvider);
+const bscBridge = new ethers.Contract(bscBridgeAddress, bridgeABI, bscProvider);
 
 async function findFailedProposals(originName: string, destinationName: string, 
                                    originBridge: ethers.Contract, destinationBridge: ethers.Contract, 
@@ -120,42 +126,56 @@ async function main() {
     try {
         const tempResults = await Promise.all([
             findFailedProposals('Ethereum', 'Meter', ethBridge, meterBridge, ethChainId, meterChainId, meterHandler),
-            findFailedProposals('Meter', 'Ethereum', meterBridge, ethBridge, meterChainId, ethChainId, ethHandler)
+            findFailedProposals('Meter', 'Ethereum', meterBridge, ethBridge, meterChainId, ethChainId, ethHandler),
+            findFailedProposals('Meter', 'Bsc', meterBridge, bscBridge, meterChainId, bscChainId, bscHandler),
+            findFailedProposals('Bsc', 'Meter', bscBridge, meterBridge, bscChainId, meterChainId, meterHandler),
+            findFailedProposals('Bsc', 'Ethereum', bscBridge, ethBridge, bscChainId, ethChainId, ethHandler),
+            findFailedProposals('Ethereum', 'Bsc', ethBridge, bscBridge, ethChainId, bscChainId, bscHandler)
         ]);
         console.log("Collecting all data");
 
-        const results = tempResults[0].concat(tempResults[1]) as ObjectMap<any>[];
+        const Eth_Meter = tempResults[0].concat(tempResults[1]) as ObjectMap<any>[];
+        const Meter_Bsc = tempResults[2].concat(tempResults[3]) as ObjectMap<any>[];
+        const Bsc_Eth = tempResults[4].concat(tempResults[5]) as ObjectMap<any>[];
 
-        console.log("Creating JSON data")
-        const json = JSON.stringify(results);
-
-        console.log("Creating CSV data");
-        const csvWriter = createObjectCsvWriter({
-            path: 'results.csv',
-            header: [
-                {id: 'origin', title: 'Origin'},
-                {id: 'destination', title: 'Destination'},
-                {id: 'proposal_resource_id', title: 'Resource ID'},
-                {id: 'proposal_dataHash', title: 'Data Hash'},
-                {id: 'proposal_yes_votes_count', title: 'Yes Vote Count'},
-                {id: 'proposal_no_votes_count', title: 'No Vote Count'},
-                {id: 'proposal_yes_votes', title: 'Yes Votes'},
-                {id: 'proposal_no_votes', title: 'No Votes'},
-                {id: 'proposal_status', title: 'Status'},
-                {id: 'proposal_proposed_block', title: 'Proposed Block'},
-                {id: 'origin_block_number', title: 'Deposit Block Number'}
-            ]
-        });
-
-        console.log("Writing JSON file");
-        await fsPromises.writeFile('results.json', json);
-
-        console.log("Writing CSV file");
-        await csvWriter.writeRecords(results);
+        await writeFile(Eth_Meter, 'Eth_Meter');
+        await writeFile(Meter_Bsc, 'Meter_Bsc');
+        await writeFile(Bsc_Eth, 'Bsc_Eth');
     } catch (e) {
         console.log("Got unhandled error: " + e);
         console.log(e);
     }
+}
+
+async function writeFile(data: ObjectMap<any>[], fileName: string) {
+    console.log(`Creating ${fileName} JSON data`)
+    const json = JSON.stringify(data);
+
+    console.log(`Creating ${fileName} CSV data`);
+    const csvWriter = createObjectCsvWriter({
+        path: fileName + '.csv',
+        header: [
+            {id: 'origin', title: 'Origin'},
+            {id: 'destination', title: 'Destination'},
+            {id: 'proposal_resource_id', title: 'Resource ID'},
+            {id: 'proposal_dataHash', title: 'Data Hash'},
+            {id: 'proposal_yes_votes_count', title: 'Yes Vote Count'},
+            {id: 'proposal_no_votes_count', title: 'No Vote Count'},
+            {id: 'proposal_yes_votes', title: 'Yes Votes'},
+            {id: 'proposal_no_votes', title: 'No Votes'},
+            {id: 'proposal_status', title: 'Status'},
+            {id: 'proposal_proposed_block', title: 'Proposed Block'},
+            {id: 'origin_block_number', title: 'Deposit Block Number'}
+        ]
+    });
+
+    console.log(`Writing ${fileName} JSON file`);
+    await fsPromises.writeFile(`${fileName}.json`, json);
+
+    console.log(`Writing ${fileName} CSV file`);
+    await csvWriter.writeRecords(data);
+
+    return ''
 }
 
 main();
