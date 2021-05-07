@@ -18,11 +18,11 @@ const bscProvider = new ethers.providers.JsonRpcProvider(BSC_PROVIDER);
 
 const ethChainId = 1;
 const meterChainId = 2;
-const bscChainId = 4;
+const bscChainId = 3;
 
 const ethBridgeAddress = "0xd7fb746e905f60e0f84F5eE545104A05066eCD86";
 const meterBridgeAddress = "0xcC5A4195323CB835f22A9B7c6C5Cf6691D4419ec";
-const bscBridgeAddress = " 0xa939D6a9E91ebD962f36bD0f7cf1c6C3C12c798f";
+const bscBridgeAddress = "0xa939D6a9E91ebD962f36bD0f7cf1c6C3C12c798f";
 
 const ethHandler = "0x5eb75e79CDa25AB88e4779aA00F1D5a95AC1352B"
 const meterHandler = "0xf8A06b9E8B24Ea21E88930F9878C410334EE076f"
@@ -138,9 +138,9 @@ async function main() {
         const Meter_Bsc = tempResults[2].concat(tempResults[3]) as ObjectMap<any>[];
         const Bsc_Eth = tempResults[4].concat(tempResults[5]) as ObjectMap<any>[];
 
-        await writeFile(Eth_Meter, 'Eth_Meter');
-        await writeFile(Meter_Bsc, 'Meter_Bsc');
-        await writeFile(Bsc_Eth, 'Bsc_Eth');
+        await writeFile(Eth_Meter, 'eth-mtr');
+        await writeFile(Meter_Bsc, 'bsc-mtr');
+        await writeFile(Bsc_Eth, 'eth-bsc');
     } catch (e) {
         console.log("Got unhandled error: " + e);
         console.log(e);
@@ -148,12 +148,12 @@ async function main() {
 }
 
 async function writeFile(data: ObjectMap<any>[], fileName: string) {
-    console.log(`Creating ${fileName} JSON data`)
+    // console.log(`Creating result/${fileName} JSON data`)
     const json = JSON.stringify(data);
 
-    console.log(`Creating ${fileName} CSV data`);
+    // console.log(`Creating ${fileName} CSV data`);
     const csvWriter = createObjectCsvWriter({
-        path: fileName + '.csv',
+        path: `result/${fileName}.csv`,
         header: [
             {id: 'origin', title: 'Origin'},
             {id: 'destination', title: 'Destination'},
@@ -169,10 +169,10 @@ async function writeFile(data: ObjectMap<any>[], fileName: string) {
         ]
     });
 
-    console.log(`Writing ${fileName} JSON file`);
-    await fsPromises.writeFile(`${fileName}.json`, json);
+    console.log(`Writing result/${fileName} JSON file`);
+    await fsPromises.writeFile(`result/${fileName}.json`, json);
 
-    console.log(`Writing ${fileName} CSV file`);
+    console.log(`Writing result/${fileName} CSV file`);
     await csvWriter.writeRecords(data);
 
     return ''
