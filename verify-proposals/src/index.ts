@@ -1,6 +1,6 @@
 import { ethers, BigNumber } from "ethers";
 import PromisePool from '@supercharge/promise-pool';
-import { promises as fsPromises} from 'fs';
+import { promises as fsPromises } from 'fs';
 import { createObjectCsvWriter } from 'csv-writer';
 import { ObjectMap } from "csv-writer/src/lib/lang/object";
 import { config } from 'dotenv';
@@ -32,10 +32,10 @@ const ethBridge = new ethers.Contract(ethBridgeAddress, bridgeABI, ethProvider);
 const meterBridge = new ethers.Contract(meterBridgeAddress, bridgeABI, meterProvider);
 const bscBridge = new ethers.Contract(bscBridgeAddress, bridgeABI, bscProvider);
 
-async function findFailedProposals(originName: string, destinationName: string, 
-                                   originBridge: ethers.Contract, destinationBridge: ethers.Contract, 
-                                   originChainID: number, destinationChainID: number, 
-                                   destinationHandler: string, startOriginBlock: number = 0) {
+async function findFailedProposals(originName: string, destinationName: string,
+    originBridge: ethers.Contract, destinationBridge: ethers.Contract,
+    originChainID: number, destinationChainID: number,
+    destinationHandler: string, startOriginBlock: number = 0) {
     const totalDeposits = Number((await originBridge._depositCounts(destinationChainID)).toString());
     console.log("Searching thru " + totalDeposits + " deposits for")
     let noinces = [...Array(totalDeposits).keys()];
@@ -50,7 +50,7 @@ async function findFailedProposals(originName: string, destinationName: string,
             const hash = ethers.utils.solidityKeccak256(["address", "bytes"], [destinationHandler, records]);
             console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Grabbing proposal with hash " + hash)
             const proposal = await destinationBridge.getProposal(originChainID, noince, hash);
-            
+
             if (proposal._resourceID == "0x0000000000000000000000000000000000000000000000000000000000000000") {
                 console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] No proposal found, skipping")
                 return null;
@@ -70,8 +70,18 @@ async function findFailedProposals(originName: string, destinationName: string,
                 originBlockNumber = "Deposit not found on Origin Chain";
                 console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] No Deposit event found")
             } else if (originEvents.length > 1) {
-                originBlockNumber = "Multiple Deposit events with the noince " + noince + " found on the Origin Chain"; 
-                console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Multiple Deposit events found with same noince")
+                // originBlockNumber = "Multiple Deposit events with the noince " + noince + " found on the Origin Chain"; 
+                // console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Multiple Deposit events found with same noince")
+
+                const originEvent1 = originEvents[0];
+                const originEvent2 = originEvents[1];
+                if (originEvent1.args && originEvent1.args.resourceID == proposal._resourceID && originEvent1.args.destinationChainID == destinationChainID) {
+                    originBlockNumber = originEvent1.blockNumber.toString();
+                } else if (originEvent2.args && originEvent2.args.resourceID == proposal._resourceID && originEvent2.args.destinationChainID == destinationChainID) {
+                    originBlockNumber = originEvent2.blockNumber.toString();
+                } else {
+                    return null;
+                }
             } else {
                 const originEvent = originEvents[0];
                 if (originEvent.args != null) {
@@ -95,7 +105,7 @@ async function findFailedProposals(originName: string, destinationName: string,
                     return null;
                 }
             }
-            
+
             if (proposal._status != 3) {
                 console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Proposal status is not success, logging data found")
                 const yes_votes_string = proposal._yesVotes.join()
@@ -118,7 +128,7 @@ async function findFailedProposals(originName: string, destinationName: string,
 
             return null;
         })
-    
+
     return results.filter(p => p != null);
 }
 
@@ -149,23 +159,23 @@ async function main() {
 
 async function writeFile(data: ObjectMap<any>[], fileName: string) {
     // console.log(`Creating result/${fileName} JSON data`)
-    const json = JSON.stringify(data);
+    const json = JSON.stringify(data, null, 2);
 
     // console.log(`Creating ${fileName} CSV data`);
     const csvWriter = createObjectCsvWriter({
         path: `result/${fileName}.csv`,
         header: [
-            {id: 'origin', title: 'Origin'},
-            {id: 'destination', title: 'Destination'},
-            {id: 'proposal_resource_id', title: 'Resource ID'},
-            {id: 'proposal_dataHash', title: 'Data Hash'},
-            {id: 'proposal_yes_votes_count', title: 'Yes Vote Count'},
-            {id: 'proposal_no_votes_count', title: 'No Vote Count'},
-            {id: 'proposal_yes_votes', title: 'Yes Votes'},
-            {id: 'proposal_no_votes', title: 'No Votes'},
-            {id: 'proposal_status', title: 'Status'},
-            {id: 'proposal_proposed_block', title: 'Proposed Block'},
-            {id: 'origin_block_number', title: 'Deposit Block Number'}
+            { id: 'origin', title: 'Origin' },
+            { id: 'destination', title: 'Destination' },
+            { id: 'proposal_resource_id', title: 'Resource ID' },
+            { id: 'proposal_dataHash', title: 'Data Hash' },
+            { id: 'proposal_yes_votes_count', title: 'Yes Vote Count' },
+            { id: 'proposal_no_votes_count', title: 'No Vote Count' },
+            { id: 'proposal_yes_votes', title: 'Yes Votes' },
+            { id: 'proposal_no_votes', title: 'No Votes' },
+            { id: 'proposal_status', title: 'Status' },
+            { id: 'proposal_proposed_block', title: 'Proposed Block' },
+            { id: 'origin_block_number', title: 'Deposit Block Number' }
         ]
     });
 
