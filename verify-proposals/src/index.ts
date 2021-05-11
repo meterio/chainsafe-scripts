@@ -69,22 +69,28 @@ async function findFailedProposals(originName: string, destinationName: string,
             if (originEvents.length == 0) {
                 originBlockNumber = "Deposit not found on Origin Chain";
                 console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] No Deposit event found")
-            } else if (originEvents.length > 1) {
-                // originBlockNumber = "Multiple Deposit events with the noince " + noince + " found on the Origin Chain"; 
-                // console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Multiple Deposit events found with same noince")
-
-                const originEvent1 = originEvents[0];
-                const originEvent2 = originEvents[1];
-                if (originEvent1.args && originEvent1.args.resourceID == proposal._resourceID && originEvent1.args.destinationChainID == destinationChainID) {
-                    originBlockNumber = originEvent1.blockNumber.toString();
-                } else if (originEvent2.args && originEvent2.args.resourceID == proposal._resourceID && originEvent2.args.destinationChainID == destinationChainID) {
-                    originBlockNumber = originEvent2.blockNumber.toString();
-                } else {
-                    return null;
-                }
             } else {
-                const originEvent = originEvents[0];
-                if (originEvent.args != null) {
+                let originEvent:ethers.Event = undefined as any;
+                let validEvents:ethers.Event[] = [];
+                if (originEvents.length>1){
+                    validEvents = originEvents.filter(e=>e.args!=null && e.args.destinationChainID == destinationChainID);
+                    if (validEvents.length == 1){
+                        originEvent = validEvents[0];
+                    }
+                } else{
+                    originEvent = originEvents[0];
+                }
+                if (!originEvent){
+                    if (validEvents.length==0){
+                        originBlockNumber = "Deposit not found on Origin Chain";
+                        console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] No Deposit event found")
+                    } else if (validEvents.length>1){
+                        originBlockNumber = "Multiple Deposit events with the noince " + noince + " found on the Origin Chain"; 
+                        console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Multiple Deposit events found with same noince")
+                    } else {
+                        // should not fall in this
+                    }
+                } else if (originEvent.args != null) {
                     if (originEvent.args.resourceID != proposal._resourceID) {
                         originBlockNumber = "Resource ID of Deposit event doesn't match Proposal, expected " + proposal._resourceID + " but got " + originEvent.args.resourceID;
                         console.log("[" + originName + " -> " + destinationName + " | Noince " + noince + "] Deposit event found, but proposal resource ID mismatch")
