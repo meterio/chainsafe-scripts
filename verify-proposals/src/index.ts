@@ -17,16 +17,16 @@ const meterProvider = new ethers.providers.JsonRpcProvider(METER_PROVIDER);
 const bscProvider = new ethers.providers.JsonRpcProvider(BSC_PROVIDER);
 
 const ethChainId = 1;
-const meterChainId = 2;
-const bscChainId = 3;
+const meterChainId = 3;
+const bscChainId = 4;
 
-const ethBridgeAddress = "0xd7fb746e905f60e0f84F5eE545104A05066eCD86";
-const meterBridgeAddress = "0xcC5A4195323CB835f22A9B7c6C5Cf6691D4419ec";
-const bscBridgeAddress = "0xa939D6a9E91ebD962f36bD0f7cf1c6C3C12c798f";
+const ethBridgeAddress = "0xbD515E41DF155112Cc883f8981CB763a286261be";
+const meterBridgeAddress = "0x7C6Fb3B4a23BD9b0c2874bEe4EF672C64e83838B";
+const bscBridgeAddress = "0x223fafbc2cA53A75CcfF5B2369128d3d1a828F36";
 
-const ethHandler = "0x5eb75e79CDa25AB88e4779aA00F1D5a95AC1352B"
-const meterHandler = "0xf8A06b9E8B24Ea21E88930F9878C410334EE076f"
-const bscHandler = "0xD352C65Bcea484A5d10cB596CF80aBB846c6898F"
+const ethHandler = "0xde4fC7C3C5E7bE3F16506FcC790a8D93f8Ca0b40"
+const meterHandler = "0x60f1ABAa3ED8A573c91C65A5b82AeC4BF35b77b8"
+const bscHandler = "0x5945241BBB68B4454bB67Bd2B069e74C09AC3D51"
 
 const ethBridge = new ethers.Contract(ethBridgeAddress, bridgeABI, ethProvider);
 const meterBridge = new ethers.Contract(meterBridgeAddress, bridgeABI, meterProvider);
